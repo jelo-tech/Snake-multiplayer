@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>2-Player Snake Maze Chase</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #1a1a1a;
+      background-image: radial-gradient(circle at center, #333 0%, #1a1a1a 100%);
+      color: #ddd;
+      overflow: hidden;
+    }
+
+    #gameArea {
+      width: 700px;
+      height: 500px;
+      margin: 20px auto;
+      background-color: #2a2a2a;
+      background-image: url('https://www.transparenttextures.com/patterns/asfalt-light.png');
+      position: relative;
+      border: 2px solid #555;
+      box-shadow: 0 0 20px rgba(255, 0, 0, 0.3);
+    }
+
+    .snake {
+      width: 20px;
+      height: 20px;
+      position: absolute;
+    }
+
+    #food {
+      width: 20px;
+      height: 20px;
+      background-color: red;
+      position: absolute;
+    }
+
+    .wall {
+      width: 20px;
+      height: 20px;
+      background-color: gray;
+      position: absolute;
+    }
+
+    .enemy {
+      width: 20px;
+      height: 20px;
+      background-color: black;
+      position: absolute;
+      border-radius: 50%;
+      border: 2px solid crimson;
+      box-shadow: 0 0 5px crimson;
+    }
+
+    .enemy::before,
+    .enemy::after {
+      content: '';
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background-color: crimson;
+      border-radius: 50%;
+      top: 6px;
+    }
+
+    .enemy::before {
+      left: 5px;
+    }
+
+    .enemy::after {
+      right: 5px;
+    }
+
+    #scoreboard {
+      text-align: center;
+      font-size: 18px;
+      margin: 10px;
+      color: #f8f8f8;
+    }
+  </style>
+</head>
+<body>
+  <h2 style="text-align: center; color: #f8f8f8;">Player 1: Arrow keys | Player 2: W A S D</h2>
+  <div id="scoreboard">Player 1 (🟩): 0 | Player 2 (🟦): 0</div>
+  <div id="gameArea"></div>
+
+  <script>
+    const gameArea = document.getElementById('gameArea');
+    const boxSize = 20;
+    const scoreboard = document.getElementById('scoreboard');
+
+    let snake1 = [{ top: 200, left: 200 }];
+    let snake2 = [{ top: 280, left: 200 }];
+    let direction1 = 'ArrowRight';
+    let direction2 = 'd';
+    let food = { top: 100, left: 100 };
+    let enemy = { top: 0, left: 0 };
+    let enemy2 = { top: 480, left: 680 };
+    let enemyMoveCounter = 0;
+    const enemyMoveDelay = 3;
+    let score1 = 0;
+    let score2 = 0;
+    const walls = [];
+
+    function draw() {
+      gameArea.innerHTML = '';
+
+      walls.forEach(wall => {
+        const wallDiv = document.createElement('div');
+        wallDiv.className = 'wall';
+        wallDiv.style.top = wall.top + 'px';
+        wallDiv.style.left = wall.left + 'px';
+        gameArea.appendChild(wallDiv);
+      });
+
+      snake1.forEach((segment, index) => {
+        const div = document.createElement('div');
+        div.className = 'snake';
+        div.style.top = segment.top + 'px';
+        div.style.left = segment.left + 'px';
+        div.style.backgroundColor = index === 0 ? 'limegreen' : 'green';
+        gameArea.appendChild(div);
+      });
+
+      snake2.forEach((segment, index) => {
+        const div = document.createElement('div');
+        div.className = 'snake';
+        div.style.top = segment.top + 'px';
+        div.style.left = segment.left + 'px';
+        div.style.backgroundColor = index === 0 ? 'dodgerblue' : 'blue';
+        gameArea.appendChild(div);
+      });
+
+      const foodBox = document.createElement('div');
+      foodBox.id = 'food';
+      foodBox.style.top = food.top + 'px';
+      foodBox.style.left = food.left + 'px';
+      gameArea.appendChild(foodBox);
+
+      [enemy, enemy2].forEach(e => {
+        const enemyDiv = document.createElement('div');
+        enemyDiv.className = 'enemy';
+        enemyDiv.style.top = e.top + 'px';
+        enemyDiv.style.left = e.left + 'px';
+        gameArea.appendChild(enemyDiv);
+      });
+
+      scoreboard.innerText = `Player 1 (🟩): ${score1} | Player 2 (🟦): ${score2}`;
+    }
+
+    function checkCollision(head) {
+      return walls.some(wall => wall.top === head.top && wall.left === head.left) ||
+        (head.top === enemy.top && head.left === enemy.left) ||
+        (head.top === enemy2.top && head.left === enemy2.left);
+    }
+
+    function moveEnemy() {
+      const target1 = Math.random() < 0.5 ? snake1[0] : snake2[0];
+      const target2 = Math.random() < 0.5 ? snake1[0] : snake2[0];
+
+      [enemy, enemy2].forEach((e, i) => {
+        const target = i === 0 ? target1 : target2;
+        if (e.top < target.top) e.top += boxSize;
+        else if (e.top > target.top) e.top -= boxSize;
+        if (e.left < target.left) e.left += boxSize;
+        else if (e.left > target.left) e.left -= boxSize;
+      });
+    }
+
+    function moveSnake(snake, direction, playerNum) {
+      const head = { ...snake[0] };
+
+      switch (direction) {
+        case 'ArrowUp': case 'w': head.top -= boxSize; break;
+        case 'ArrowDown': case 's': head.top += boxSize; break;
+        case 'ArrowLeft': case 'a': head.left -= boxSize; break;
+        case 'ArrowRight': case 'd': head.left += boxSize; break;
+      }
+
+      head.top = (head.top + 500) % 500;
+      head.left = (head.left + 700) % 700;
+
+      if (checkCollision(head)) {
+        alert(`Player ${playerNum === 1 ? 2 : 1} Wins!`);
+        resetGame();
+        return null;
+      }
+
+      snake.unshift(head);
+
+      if (head.top === food.top && head.left === food.left) {
+        food = {
+          top: Math.floor(Math.random() * 25) * boxSize,
+          left: Math.floor(Math.random() * 35) * boxSize,
+        };
+        playerNum === 1 ? score1++ : score2++;
+
+        if (score1 >= 10 || score2 >= 10) {
+          alert(`Player ${score1 >= 10 ? 1 : 2} Wins!`);
+          resetGame();
+          return null;
+        }
+      } else {
+        snake.pop();
+      }
+
+      return snake;
+    }
+
+    function gameLoop() {
+      const newSnake1 = moveSnake(snake1, direction1, 1);
+      const newSnake2 = moveSnake(snake2, direction2, 2);
+      if (!newSnake1 || !newSnake2) return;
+
+      snake1 = newSnake1;
+      snake2 = newSnake2;
+
+      if (++enemyMoveCounter >= enemyMoveDelay) {
+        moveEnemy();
+        enemyMoveCounter = 0;
+      }
+
+      draw();
+    }
+
+    function resetGame() {
+      snake1 = [{ top: 200, left: 200 }];
+      snake2 = [{ top: 280, left: 200 }];
+      direction1 = 'ArrowRight';
+      direction2 = 'd';
+      food = {
+        top: Math.floor(Math.random() * 25) * boxSize,
+        left: Math.floor(Math.random() * 35) * boxSize,
+      };
+      enemy = { top: 0, left: 0 };
+      enemy2 = { top: 480, left: 680 };
+      score1 = 0;
+      score2 = 0;
+      enemyMoveCounter = 0;
+    }
+
+    document.addEventListener('keydown', (e) => {
+      const key = e.key.toLowerCase();
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) direction1 = e.key;
+      if (['w', 'a', 's', 'd'].includes(key)) direction2 = key;
+    });
+
+    setInterval(gameLoop, 100);
+    draw();
+  </script>
+</body>
+</html>
